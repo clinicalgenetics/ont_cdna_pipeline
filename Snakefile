@@ -5,39 +5,52 @@ SAMPLES = glob.glob(os.path.join("/Users/leily/mmk_server/RR/RawDataBackup/RNASe
 rule all:
     input:
         "done"
+# Optional trimming
 
-# featurcount
-rule count:
+# minimap2
+rule mapping:
 	input:
-		bam=expand("{sample}", sample=SAMPLES),
+		fastq = "{sample}.fastq"
 	params:
-		gtf="/Users/leily/dbgap/ref/gencode.v19.annotation.gtf"
+        ref =
+		gtf =
 	output:
-		"counts0.tsv"
+		bam = "{sample}.bam"
 	shell:
-		"/Users/leily/.conda/envs/deseq2/bin/featureCounts --extraAttributes gene_name,gene_type,gene_status -O -s 0 -p -t exon -g gene_id -T 14 -a {params.gtf} -o {output} {input}"
+		"""
+          minimap2 -ax splice -t 8 -K 1G --junc-bed {params.gtf} {params.ref} {input.fastq} |
+          samtools sort -@ 4 -T /tmp/ -o {output.bam} ; samtools index {output.bam}
+        """
 
-
-# remove extra coulmns before deseq2
-rule modify_table:
+# deeptools_qc
+## coverage
+rule bamCoverage:
     input:
-        count_matrix = "counts0.tsv"
+        bams = "{sample}.bam"
     params:
         metadata = "metadata.tsv"
     output:
-        out = "count.processed.tsv"
+        out = "{sample}.bw"
     shell:
-        "sed -e \"1d\" {input.count_matrix} | cut -f1,10- > {output.out} "
-# deseq
+        "bamCoverage -b {input.bam} -o {output.bw} -p 8 --normalizeUsing RPKM "
 
-rule make_matrix:
-	input:
-		"count.processed.tsv"
-	output:
-        path = os.path.join(".")
-		flag = temp("done")
-	shell:
+## bwsummary
+rule multiBigWigSummary:
+    input:
+        bws = expand("{sample}.bw", sample=SAMPLES)
+    output:
+        matrix = "multiBigWigSummary.npz"
+    shell:
         """
-        Rscript -c "{input} -m {params.metadata} -o {output.path};
-        touch {output.flag}
+        multiBigwigSummary bins -b {input.bws} -o {output.matrix} -p 8
         """
+
+## plotPCA
+rule plotPCA:
+    input:
+    output:
+    shell:
+# Flair
+## bam2bed12
+rule bam2bed12:
+    
