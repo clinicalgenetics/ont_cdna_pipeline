@@ -6,7 +6,7 @@ rule all:
     input:
         os.path.join(config['outdir'], "pcaplot.png"),
         os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed"),
-        # os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+        os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
 # Optional trimming
 
 
@@ -73,7 +73,6 @@ rule flair_correct:
     input:
         bed = os.path.join(config['outdir'], "bed12_files", "{sample}.bed")
     output:
-        # correct = dir(os.path.join(config['outdir'], "flair_correct")),
         all_correct = os.path.join(config['outdir'], "flair_correct", "{sample}_all_corrected.bed")
 
     params:
@@ -97,24 +96,23 @@ rule correct_concat:
         """
 
 
-# # flair collapse
-# rule flair_collapse:
-#     input:
-#         fastqs = expand(os.path.join(config['indir'], "{sample}.fastq.gz"), sample = config['samples']),
-#         concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
-#     output:
-#         correct = dir(os.path.join(config['outdir'], "flair_collapse")),
-#         isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
-#     params:
-#         ref = config['ref'],
-#         gtf = config['gtf']
-#     shell:
-#         """
-#         flair collapse -g {params.ref} -f {params.gtf} -q {input.concat} \
-#         -r {input.fastqs} -o {output.correct}/concat;
-#         head -n1 {output.isoform}
-#         """
-#
+# flair collapse
+rule flair_collapse:
+    input:
+        fastqs = expand(os.path.join(config['indir'], "{sample}.fastq.gz"), sample = config['samples']),
+        concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
+    output:
+        isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+    params:
+        ref = config['ref'],
+        gtf = config['gtf'],
+        file_prefix = os.path.join(config['outdir'], "flair_collapse", "concat")
+    shell:
+        """
+        flair collapse -g {params.ref} -f {params.gtf} -q {input.concat} -r {input.fastqs} -o {params.file_prefix};
+        head -n1 {output.isoform}
+        """
+
 # # flair quantify
 # rule flair_quantify:
 #     input:
