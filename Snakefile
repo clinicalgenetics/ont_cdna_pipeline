@@ -5,7 +5,8 @@ import snakemake
 rule all:
     input:
         os.path.join(config['outdir'], "pcaplot.png"),
-        os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
+        os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed"),
+        # os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
 # Optional trimming
 
 
@@ -55,7 +56,7 @@ rule plotPCA:
         """
         plotPCA -in {input.matrix} -o {output.plot}
         """
-# # Flair
+# Flair
 ## bam2bed12
 rule bam2bed12:
     input:
@@ -72,18 +73,22 @@ rule flair_correct:
     input:
         bed = os.path.join(config['outdir'], "bed12_files", "{sample}.bed")
     output:
-        correct = os.path.join(config['outdir'], "flair_correct", "{sample}")
+        # correct = dir(os.path.join(config['outdir'], "flair_correct")),
+        all_correct = os.path.join(config['outdir'], "flair_correct", "{sample}_all_corrected.bed")
+
     params:
         ref = config['ref'],
-        gtf = config['gtf']
+        gtf = config['gtf'],
+        file_prefix = os.path.join(config['outdir'], "flair_correct", "{sample}")
     shell:
         """
-        flair correct -q  {input.bed} -t 8 -f {params.gtf} -g {params.ref} -o {output.correct}
+        flair correct -q  {input.bed} -t 8 -f {params.gtf} -g {params.ref} -o {params.file_prefix};
+        head -n1 {output.all_correct}
         """
 
 rule correct_concat:
     input:
-        all_correct = expand(os.path.join(config['outdir'], "flair_correct", "{sample}"), sample = config['samples'])
+        all_correct = expand(os.path.join(config['outdir'], "flair_correct", "{sample}_all_corrected.bed"), sample = config['samples'])
     output:
         concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
     shell:
@@ -92,18 +97,32 @@ rule correct_concat:
         """
 
 
-## flair collapse
-rule flair_collapse:
-    input:
-        fastqs = expand(os.path.join(config['indir'], "{sample}.fastq.gz"), sample = config['samples']),
-        concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
-    output:
-        correct = os.path.join(config['outdir'], "flair_collapse", "concat")
-    params:
-        ref = config['ref'],
-        gtf = config['gtf']
-    shell:
-        """
-        flair collapse -g {params.ref} -f {params.gtf} -q {input.concat} \
-        -r {input.fastqs} -o
-        """
+# # flair collapse
+# rule flair_collapse:
+#     input:
+#         fastqs = expand(os.path.join(config['indir'], "{sample}.fastq.gz"), sample = config['samples']),
+#         concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
+#     output:
+#         correct = dir(os.path.join(config['outdir'], "flair_collapse")),
+#         isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+#     params:
+#         ref = config['ref'],
+#         gtf = config['gtf']
+#     shell:
+#         """
+#         flair collapse -g {params.ref} -f {params.gtf} -q {input.concat} \
+#         -r {input.fastqs} -o {output.correct}/concat;
+#         head -n1 {output.isoform}
+#         """
+#
+# # flair quantify
+# rule flair_quantify:
+#     input:
+#         isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+#     output:
+#         quantify = dir(os.path.join(config['outdir'], "flair_quantify"))
+#     params:
+#         metadata= "test.tsv"
+#     shell:
+#     """
+#     flair quantify -r {params.metadata} -i {input.isoform} --tpm -t 14 -o {output.quantify}
