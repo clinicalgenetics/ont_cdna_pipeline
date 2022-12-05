@@ -14,6 +14,9 @@ parser.add_argument('-i', '--input',
 parser.add_argument('-r', '--ref',
                     help = "reference genome, fasta file, should not be zipped.",
                     dest = 'ref', required = True)
+parser.add_argument('-m', '--metadata',
+                    help = "sampels metadata, tsv file",
+                    dest = 'metadata', required = True)
 parser.add_argument('-o', '--output',
                     help = "path to the output folder",
                     dest = 'output', required = True)
@@ -30,5 +33,5 @@ args = parser.parse_args()
 # running the snakemake pipeline
 wdir = os.path.dirname(os.path.realpath(__file__))
 samples = [os.path.basename(i).split(".fastq.gz")[0] for i in glob.glob(os.path.join(args.input, "*.fastq.gz"))]
-config = {"samples":samples, "indir": args.input, "outdir": args.output, "ref": args.ref, "gtf": args.gtf}
+config = {"samples":samples, "indir": args.input, "outdir": args.output, "ref": args.ref, "gtf": args.gtf, "metadata": args.metadata}
 sm.snakemake(os.path.join(wdir , "Snakefile"), config=config, cores=3, verbose=True, dryrun=False)

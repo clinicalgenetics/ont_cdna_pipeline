@@ -5,8 +5,7 @@ import snakemake
 rule all:
     input:
         os.path.join(config['outdir'], "pcaplot.png"),
-        os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed"),
-        os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+        os.path.join(config['outdir'], "done")
 # Optional trimming
 
 
@@ -113,14 +112,33 @@ rule flair_collapse:
         head -n1 {output.isoform}
         """
 
-# # flair quantify
-# rule flair_quantify:
-#     input:
-#         isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
-#     output:
-#         quantify = dir(os.path.join(config['outdir'], "flair_quantify"))
-#     params:
-#         metadata= "test.tsv"
-#     shell:
-#     """
-#     flair quantify -r {params.metadata} -i {input.isoform} --tpm -t 14 -o {output.quantify}
+
+# flair quantify
+rule flair_quantify:
+    input:
+        isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+    output:
+        count_matrix = os.path.join(config['outdir'], "flair_quantify", "flair.quantify.counts.tsv")
+    params:
+        metadata= config["metadata"],
+        file_prefix = os.path.join(config['outdir'], "flair_quantify", "flair.quantify")
+
+    shell:
+        """
+        flair quantify -r {params.metadata} -i {input.isoform} --tpm -t 6 -o {params.file_prefix};
+        """
+
+
+# flair diffSplice (by default only the first 2 cond in the smaplesheets are taken into account)
+rule flair_diffsplice:
+    input:
+        count_matrix = os.path.join(config['outdir'], "flair_quantify", "flair.quantify.counts.tsv"),
+        isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.bed")
+    output:
+        path = directory(os.path.join(config['outdir'], "flair_diffsplice")),
+        done = os.path.join(config['outdir'], "done")
+    shell:
+        """
+        flair diffSplice -i {input.isoform} -q {input.count_matrix}  --test --threads 4 --batch -o {output.path};
+        touch {output.done}
+        """
