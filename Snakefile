@@ -101,7 +101,8 @@ rule flair_collapse:
         fastqs = expand(os.path.join(config['indir'], "{sample}.fastq.gz"), sample = config['samples']),
         concat = os.path.join(config['outdir'], "flair_correct", "concat_all_corrected.bed")
     output:
-        isoform = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa")
+        isoform_fa = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.fa"),
+        soform_bed = os.path.join(config['outdir'], "flair_collapse", "concat.isoforms.bed")
     params:
         ref = config['ref'],
         gtf = config['gtf'],
@@ -109,7 +110,7 @@ rule flair_collapse:
     shell:
         """
         flair collapse -g {params.ref} -f {params.gtf} -q {input.concat} -r {input.fastqs} -o {params.file_prefix};
-        head -n1 {output.isoform}
+        head -n1 {output.isoform_fa}
         """
 
 
